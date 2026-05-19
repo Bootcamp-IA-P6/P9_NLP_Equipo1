@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
-from hatescan.scraping.youtube_scraper import fetch_comments
+# from hatescan.scraping.youtube_scraper import fetch_comments
 
 
 
@@ -104,11 +104,11 @@ else:
                     # Ejecutamos el codigo python
                     # ------------------------------------------
                     # Ejecutar scraping
-                    with st.spinner("Extrayendo comentarios de YouTube..."):
-                        comentarios = fetch_comments(url_ingresada, max_results=5)
+                    # with st.spinner("Extrayendo comentarios de YouTube..."):
+                        # comentarios = fetch_comments(url_ingresada, max_results=5)
                     # Mostrar resultado
-                    st.success("Comentarios obtenidos correctamente")
-                    st.write(comentarios)
+                    # st.success("Comentarios obtenidos correctamente")
+                    # st.write(comentarios)
                     
                     # Ejemplo: Mostrar la URL en un botón de enlace
                     st.link_button("Ir al sitio", st.session_state['ultima_url'])
