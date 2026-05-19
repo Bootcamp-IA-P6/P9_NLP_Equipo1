@@ -47,7 +47,6 @@ def login_screen():
 # st.experimental_user es un objeto que contiene la información del usuario autenticado.
 # El atributo .is_logged_in devuelve True si el usuario ha iniciado sesión y False en caso contrario.
 # Este condicional es el núcleo de la aplicación: decide si mostrar la pantalla de login o el contenido principal.
-#if not st.experimental_user.is_logged_in:
 if not st.user.is_logged_in:
     # Si el usuario NO ha iniciado sesión, llamamos a la función que muestra la pantalla de login.
     login_screen()
@@ -64,11 +63,9 @@ else:
             
             with c1:
                 # Verificamos si el objeto de usuario contiene una URL de imagen de perfil.
-                #if st.experimental_user.picture:
                 if st.user.picture:
                     try:
                         # Usamos la librería 'requests' para hacer una petición GET a la URL de la imagen.
-                        #response = requests.get(st.experimental_user.picture)
                         response = requests.get(st.user.picture)
                         # Si el código de estado de la respuesta es 200 (OK), significa que la imagen se obtuvo correctamente.
                         if response.status_code == 200:
@@ -87,9 +84,7 @@ else:
             with c2:
                 st.header("Información del usuario")                
                 # Accedemos y mostramos el nombre y el email del usuario.
-                # Estos datos son proporcionados por Google después de una autenticación exitosa.
-                #st.write(f"**Nombre:** \n {st.experimental_user.name}")
-                #st.write(f"**Correo electrónico:** \n{st.experimental_user.email}")    
+                # Estos datos son proporcionados por Google después de una autenticación exitosa. 
                 st.write(f"**Nombre:** \n {st.user.name}")
                 st.write(f"**Correo electrónico:** \n{st.user.email}")  
         
@@ -101,5 +96,4 @@ else:
     # .to_dict() convierte el objeto de usuario en un diccionario de Python.
     # Esto es excelente para depuración, ya que nos permite ver toda la información
     # que Google ha devuelto sobre el usuario.
-    #st.json(st.experimental_user.to_dict())
     st.json(st.user.to_dict())
