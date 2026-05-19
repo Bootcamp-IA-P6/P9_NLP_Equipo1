@@ -72,7 +72,8 @@ if __name__ == "__main__":
 
     # List of YouTube video URLs or IDs to scrape
     urls_to_scrape = [
-        "https://youtu.be/X_7hj0t48aU?si=Nu8qRkRfd1BXaZqz"
+        "https://www.youtube.com/watch?v=yZ2p39BVwsE",        # Deportes (El Chiringuito)
+        "https://www.youtube.com/watch?v=MY4ZUk9RVYg"         # Gaming (UrbVic)
     ]
     
     # Define the number of comments to extract per video
