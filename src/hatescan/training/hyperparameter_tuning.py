@@ -214,7 +214,11 @@ def train_tuned_model(best_params_tfidf, best_params_lr, best_params_xgb, df):
     train_df, val_df, test_df = split_dataset(df)
 
     # Build tuned vectorizer
-    vectorizer = TfidfVectorizer(**best_params_tfidf)
+    tfidf_params = best_params_tfidf.copy()
+    ngram_min = tfidf_params.pop("ngram_min")
+    ngram_max = tfidf_params.pop("ngram_max")
+    tfidf_params["ngram_range"] = (ngram_min, ngram_max)
+    vectorizer = TfidfVectorizer(**tfidf_params)
     X_train = vectorizer.fit_transform(train_df["text_processed"])
     X_val = vectorizer.transform(val_df["text_processed"])
     X_test = vectorizer.transform(test_df["text_processed"])
