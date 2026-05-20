@@ -1,4 +1,6 @@
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 import pandas as pd
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
@@ -65,15 +67,42 @@ def save_to_csv(data, filename="youtube_comments.csv"):
     print(f"Successfully saved {len(data)} comments to: {file_path}")
 
 if __name__ == "__main__":
-    # Test with a specific video
-    VIDEO_ID = "dQw4w9WgXcQ" 
-    print(f"Starting extraction for video: {VIDEO_ID}...")
+    # Import the utility to extract the ID from full URLs
+    from hatescan.utils.youtube_utils import extract_video_id
+
+    # List of YouTube video URLs or IDs to scrape
+    urls_to_scrape = [
+        "https://www.youtube.com/watch?v=yZ2p39BVwsE",        # Deportes (El Chiringuito)
+        "https://www.youtube.com/watch?v=MY4ZUk9RVYg"         # Gaming (UrbVic)
+    ]
     
-    # EXTRACT
-    raw_data = fetch_comments(VIDEO_ID, max_results=20)
-    
-    # LOAD
-    if raw_data:
-        save_to_csv(raw_data, f"comments_{VIDEO_ID}_{datetime.now().strftime('%Y%m%d')}.csv")
-    else:
-        print("No data to save.")
+    # Define the number of comments to extract per video
+    MAX_COMMENTS_PER_VIDEO = 20
+
+    print("Starting the multi-video scraping process...")
+
+    # Iterate over each URL in the list
+    for url in urls_to_scrape:
+        print(f"\nProcessing target: {url}")
+        
+        # Clean the URL to obtain the 11-character video ID
+        video_id = extract_video_id(url)
+        
+        if not video_id:
+            print(f"Skipping: Could not extract a valid video ID from {url}")
+            continue
+            
+        print(f"Extracted Video ID: {video_id}")
+        
+        # Fetch the comments using the cleaned ID
+        print(f"Fetching up to {MAX_COMMENTS_PER_VIDEO} comments...")
+        comments = fetch_comments(video_id, max_results=MAX_COMMENTS_PER_VIDEO)
+        
+        # If comments were found, save them to a unique CSV file
+        if comments:
+            output_filename = f"youtube_comments_{video_id}.csv"
+            save_to_csv(comments, filename=output_filename)
+        else:
+            print(f"No comments extracted for video {video_id}")
+
+    print("\nScraping process finished successfully.")
