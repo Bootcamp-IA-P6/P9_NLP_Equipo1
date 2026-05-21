@@ -2,10 +2,20 @@ import streamlit as st
 import pandas as pd
 
 import sys
+# import os
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
-# from hatescan.scraping.youtube_scraper import fetch_comments
 
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+sys.path.append(".")
+
+from src.hatescan.scraping.youtube_scraper import fetch_comments
+# Import the utility to extract the ID from full URLs
+from src.hatescan.utils.youtube_utils import extract_video_id
+
+# sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
+# from hatescan.scraping.youtube_scraper import fetch_comments
+# # Import the utility to extract the ID from full URLs
+# from hatescan.utils.youtube_utils import extract_video_id
 
 
 from supabase import create_client, Client
@@ -13,8 +23,11 @@ from supabase import create_client, Client
 # Supabase
 # ---------------------------------------------------------------------
 # Leer secretos
-SUPABASE_URL = st.secrets.connections.supabase.SUPABASE_URL
-SUPABASE_KEY = st.secrets.connections.supabase.SUPABASE_KEY
+#SUPABASE_URL = st.secrets.connections.supabase.SUPABASE_URL
+#SUPABASE_KEY = st.secrets.connections.supabase.SUPABASE_KEY
+
+SUPABASE_URL = st.secrets.connections.supabase.SUPABASE_URL3
+SUPABASE_KEY = st.secrets.connections.supabase.SUPABASE_KEY3
 
 # Crear conexión
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -59,6 +72,33 @@ def login_screen():
     # Línea divisoria naranja con CSS en st.markdown
     st.markdown("<hr style='border: 2px solid orange;'>", unsafe_allow_html=True)
 
+def get_users():
+    # SELECT * FROM users
+    response = (
+        supabase
+        #.table("users")
+        .table("users_test")
+        .select("*")
+        .eq("email", "juanmanuel.iriondo@gmail.com")
+        .execute()
+    )
+
+    # Datos JSON devueltos
+    return response.data
+
+def search_user(user):
+    # SELECT * FROM users
+    response = (
+        supabase
+        #.table("users")
+        .table("users_test")
+        .select("*")
+        .eq("email", user)
+        .execute()
+    )
+
+    # Datos JSON devueltos
+    return response.data
 
 # -------------------------
 # Programa
@@ -104,11 +144,24 @@ else:
                     # Ejecutamos el codigo python
                     # ------------------------------------------
                     # Ejecutar scraping
-                    # with st.spinner("Extrayendo comentarios de YouTube..."):
+                    with st.spinner("Extrayendo comentarios de YouTube..."):
                         # comentarios = fetch_comments(url_ingresada, max_results=5)
+
+                        # Clean the URL to obtain the 11-character video ID
+                        video_id = extract_video_id(url_ingresada)
+                        
+                        if not video_id:
+                            print(f"Skipping: Could not extract a valid video ID from {url_ingresada}")
+                            # continue
+                            
+                        print(f"Extracted Video ID: {video_id}")
+                        
+                        # Fetch the comments using the cleaned ID
+                        comentarios = fetch_comments(video_id, max_results=5)
+
                     # Mostrar resultado
-                    # st.success("Comentarios obtenidos correctamente")
-                    # st.write(comentarios)
+                    st.success("Comentarios obtenidos correctamente")
+                    st.write(comentarios)
                     
                     # Ejemplo: Mostrar la URL en un botón de enlace
                     st.link_button("Ir al sitio", st.session_state['ultima_url'])
@@ -135,19 +188,31 @@ else:
                 # Spinner mientras consulta
                 with st.spinner("Consultando usuarios en Supabase..."):
 
-                    # SELECT * FROM users
-                    response = (
-                        supabase
-                        .table("users")
-                        .select("*")
-                        .execute()
-                    )
+                    # # SELECT * FROM users
+                    # response = (
+                    #     supabase
+                    #     #.table("users")
+                    #     .table("users_test")
+                    #     .select("*")
+                    #     .eq("email", "juanmanuel.iriondo@gmail.com")
+                    #     .execute()
+                    # )
 
-                    # Datos JSON devueltos
-                    usuarios = response.data
+                    # # Datos JSON devueltos
+                    # usuarios = response.data
 
                     # Convertimos a DataFrame
-                    df_users = pd.DataFrame(usuarios)
+                    # df_users = pd.DataFrame(usuarios)
+
+                    # df_users = pd.DataFrame(get_users())
+                    df_users = pd.DataFrame(search_user("juanmanuel.iriondo@gmail.es"))
+
+                    # Comprobamos que ha devuelto algo
+                    if df_users.empty:
+                        st.write("El usuario No existe")
+                    else:
+                        st.write("El usuario YA existe")
+
 
                 st.success("Usuarios obtenidos correctamente")
 

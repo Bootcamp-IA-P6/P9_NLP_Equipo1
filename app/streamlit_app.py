@@ -1,84 +1,316 @@
-import streamlit as st
-import requests
+import streamlit as st 
+import pandas as pd
+import json
+import sys
+from pathlib import Path
 
-# Este código se basa en la documentación oficial de Streamlit para la autenticación:
-# https://docs.streamlit.io/develop/tutorials/authentication/google
+# Prepara el path para poder acceder a los scripts y funciones en carpeta src
+sys.path.append(".")
 
-# Configura la página para que utilice el diseño "wide" (ancho),
-# ocupando todo el ancho disponible del navegador.
-st.set_page_config(layout="wide", page_title="Ejemplo Streamlit Google Auth")
+from src.hatescan.scraping.youtube_scraper import fetch_comments
+# Import the utility to extract the ID from full URLs
+from src.hatescan.utils.youtube_utils import extract_video_id
 
-# Muestra el título principal de la aplicación web.
-st.title("Ejemplo de inicio de sesión con Google en Streamlit")
+
+from supabase import create_client, Client
+# ---------------------------------------------------------------------
+# Supabase
+# ---------------------------------------------------------------------
+# Leer secretos
+SUPABASE_URL = st.secrets.connections.supabase.SUPABASE_URL2
+SUPABASE_KEY = st.secrets.connections.supabase.SUPABASE_KEY2
+
+# Crear conexión
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Fin Supabase ---------------------------------------------------------
+
+
+# Definimos el estilo CSS apuntando al 'key' del contenedor
+css = """
+.st-key-contenedor_login {
+    background-color: rgba(173, 216, 230, 0.5); /* Fondo azul claro */
+    border: 2px solid #2b5c8f;
+    border-radius: 10px;
+    padding: 15px;
+}
+.st-key-contenedor_personalizado {
+    background-color: rgba(173, 216, 230, 0.3); /* Fondo azul claro */
+    border: 2px solid #2b5c8f;
+    border-radius: 10px;
+    padding: 15px;
+}
+.st-key-contenedor_url {
+    background-color: rgba(173, 216, 230, 0.1); /* Fondo azul claro */
+    border: 2px solid #2b5c8f;
+    border-radius: 10px;
+    padding: 15px;
+}
+"""
+
+# -------------------------
+# Datos de prueba
+# -------------------------
+
+# OJO con los datos recibidos si son true, false o null ¿Darán problemas? ¿Python debería hacerlo sólo . Usar json_load?
+# en formato json para python y streamlit como poner un valor booleano
+# en python como acceder a un campo de json
+
+prueba = '{"nombre": "Juanma", "casado": true}'
+
+result = """{ 
+    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "model_used": "transformer_roberta",
+    "total_comments": 150,
+    "toxic_count": 23,
+    "non_toxic_count": 127
+}"""
+
+resultado = """{
+  "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "model_used": "transformer_roberta",
+  "total_comments": 150,
+  "toxic_count": 23,
+  "non_toxic_count": 127,
+  "comments": [
+    {
+      "comment_id": "abc123",
+      "text_original": "you are so stupid and pathetic",
+      "is_toxic": true,
+      "confidence": 0.94,
+      "categories": {
+        "is_hatespeech": null,
+        "is_racist": null,
+        "is_threat": null,
+        "is_obscene": null
+      }
+    },
+    {
+      "comment_id": "def456",
+      "text_original": "great video, loved it!",
+      "is_toxic": false,
+      "confidence": 0.97,
+      "categories": {
+        "is_hatespeech": null,
+        "is_racist": null,
+        "is_threat": null,
+        "is_obscene": null
+      }
+    }
+  ]
+}"""
+
+# -------------------------
+# Funciones
+# -------------------------
 
 def login_screen():
-    """
-    Muestra la pantalla de inicio de sesión cuando un usuario no está autenticado.
-    Presenta un encabezado, un subencabezado y un botón que, al ser presionado,
-    inicia el flujo de autenticación de Google gestionado por Streamlit.
-    """
-    st.header("Esta aplicación es privada.")
-    st.subheader("Por favor, inicia sesión.")
-    # El botón "st.button" inicia el flujo de login gracias al argumento on_click=st.login.
-    # st.login() es una función nativa de Streamlit que redirige al usuario a la
-    # página de inicio de sesión de Google.
-    # El texto ":material/login:" es un atajo para usar los iconos de Material Design.
-    st.button(":material/login: Iniciar sesión con Google", on_click=st.login)
+    st.header(":orange[HateScan]")
 
-# =============================================================================
-# LÓGICA PRINCIPAL DE LA APLICACIÓN
-# =============================================================================
+    # Línea divisoria naranja con CSS en st.markdown
+    st.markdown("<hr style='border: 2px solid orange;'>", unsafe_allow_html=True)
 
-# st.user es un objeto que contiene la información del usuario autenticado.
-# El atributo .is_logged_in devuelve True si el usuario ha iniciado sesión y False en caso contrario.
-# Este condicional es el núcleo de la aplicación: decide si mostrar la pantalla de login o el contenido principal.
+    with st.container(border=True, key="contenedor_login"):
+        st.header("This app is private.")
+        st.subheader("Please log in.")
+        st.button("Log in with Google", on_click=st.login)
+
+    # Línea divisoria naranja con CSS en st.markdown
+    st.markdown("<hr style='border: 2px solid orange;'>", unsafe_allow_html=True)
+
+def get_comments(url):
+    # Clean the URL to obtain the 11-character video ID
+    video_id = extract_video_id(url)
+    
+    if not video_id:
+        print(f"Skipping: Could not extract a valid video ID from {url}")
+        return []
+        
+    print(f"Extracted Video ID: {video_id}")
+    
+    # Fetch the comments using the cleaned ID
+    return fetch_comments(video_id, max_results=5)
+
+def get_users():
+    # SELECT * FROM users
+    response = (
+        supabase
+        .table("users")
+        #.table("users_test")
+        .select("*")
+        .execute()
+    )
+
+    # Datos JSON devueltos
+    return response.data
+
+def search_user(user):
+    # SELECT * FROM users
+    response = (
+        supabase
+        .table("users")
+        #.table("users_test")
+        .select("*")
+        .eq("email", user)
+        .execute()
+    )
+
+    # Datos JSON devueltos
+    return response.data
+
+def save_comments(datos):
+    # # 1. Datos externos simulados como cadena de texto
+    # cadena_externa = '{"usuario": "Ana", "edad": 28, "activo": true}'
+
+    # # 2. Convertir la cadena a un diccionario de Python
+    # datos_json = json.loads(cadena_externa)
+
+    # print(datos_json["usuario"]) # Imprime: Ana
+
+    comment = {}
+    comment["model_used"] = datos["model_used"]
+    comment["text_original"] = datos["comments"][0]["text_original"] 
+    comment["is_toxic"] = datos["comments"][0]["is_toxic"] 
+
+    return comment
+
+
+# -------------------------
+# Programa
+# -------------------------
+
+# Inyectamos el CSS en la aplicación
+st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
 if not st.user.is_logged_in:
-    # Si el usuario NO ha iniciado sesión, llamamos a la función que muestra la pantalla de login.
     login_screen()
 else:
-    # Si el usuario SÍ ha iniciado sesión, se ejecuta este bloque de código.
-    # Usamos "with st.sidebar:" para que todo el contenido indentado a continuación
-    # aparezca en la barra lateral de la aplicación.
-    with st.sidebar:
-        # Creamos un contenedor para organizar mejor los elementos de la barra lateral.
-        with st.container():
-            # Dividimos el contenedor en dos columnas para alinear la imagen y la información del usuario.
-            # El ratio [1, 3] significa que la segunda columna será 3 veces más ancha que la primera.
-            c1, c2 = st.columns([1, 3])    
-            
-            with c1:
-                # Verificamos si el objeto de usuario contiene una URL de imagen de perfil.
-                if st.user.picture:
-                    try:
-                        # Usamos la librería 'requests' para hacer una petición GET a la URL de la imagen.
-                        response = requests.get(st.user.picture)
-                        # Si el código de estado de la respuesta es 200 (OK), significa que la imagen se obtuvo correctamente.
-                        if response.status_code == 200:
-                            # Mostramos la imagen en la aplicación. response.content contiene los bytes de la imagen.
-                            st.image(response.content, width=100)
-                        else:
-                            # Si hay un problema al descargar la imagen (ej: error 404), mostramos una advertencia.
-                            st.warning("No se pudo cargar la imagen de perfil.")
-                    except Exception as e:
-                        # Capturamos cualquier otra excepción (ej: problemas de red) y mostramos un mensaje de error.
-                        st.warning(f"Error al cargar la imagen: {e}")
-                else:
-                    # Si el usuario de Google no tiene una imagen de perfil, informamos de ello.
-                    st.info("No hay imagen de perfil disponible.")  
-            
-            with c2:
-                st.header("Información del usuario")                
-                # Accedemos y mostramos el nombre y el email del usuario.
-                # Estos datos son proporcionados por Google después de una autenticación exitosa. 
-                st.write(f"**Nombre:** \n {st.user.name}")
-                st.write(f"**Correo electrónico:** \n{st.user.email}")  
-        
-        # Creamos un botón para cerrar sesión.
-        # Al hacer clic, se ejecuta la función nativa st.logout(), que borra la sesión del usuario.
-        st.button(":material/logout: Cerrar sesión", on_click=st.logout)
+    # Usando contenedores con borde
+    with st.container(border=True, key="contenedor_personalizado"):
+        st.header(f"Welcome, {st.user.name}!")
+        st.write(f"**Correo electrónico:** \n{st.user.email}") 
+        st.write("🤓")
 
-    # st.json() es una forma útil de visualizar datos en formato JSON.
-    # .to_dict() convierte el objeto de usuario en un diccionario de Python.
-    # Esto es excelente para depuración, ya que nos permite ver toda la información
-    # que Google ha devuelto sobre el usuario.
-    st.json(st.user.to_dict())
+    # -----------------------------------------------PESTAÑAS----------------------------------------------------
+    # Creamos las 3 pestañas
+    tab1, tab2, tab3 = st.tabs(["URL Video", "Comments", "Pestaña 3"])
+
+    df1 = pd.read_csv("data/raw/comments_dQw4w9WgXcQ_20260511.csv")
+
+    with tab1:
+        st.header("Datos del primer CSV")
+            # Usando contenedores con borde
+        with st.container(border=True, key="contenedor_url"):
+
+            # 1. Pedir al usuario que ingrese la URL
+            url_ingresada = st.text_input("Introduce una URL de un video de Youtube (ej. https://google.com):")
+
+            # 2. Botón de acción
+            if st.button("Procesar URL"):
+                if url_ingresada:
+                    # Guardamos en sesión para mantener el estado
+                    st.session_state['ultima_url'] = url_ingresada
+                    
+                    # Aquí ejecutas lo que necesites hacer con la URL
+                    st.success(f"¡URL recibida con éxito!")
+                    st.write(f"Accediendo a: {st.session_state['ultima_url']}")
+
+                    # ------------------------------------------
+                    # Ejecutamos el codigo python
+                    # ------------------------------------------
+                    # Ejecutar scraping
+                    with st.spinner("Extrayendo comentarios de YouTube..."):
+
+                        # # Clean the URL to obtain the 11-character video ID
+                        # video_id = extract_video_id(url_ingresada)
+                        
+                        # if not video_id:
+                        #     print(f"Skipping: Could not extract a valid video ID from {url_ingresada}")
+                        #     # continue
+                            
+                        # print(f"Extracted Video ID: {video_id}")
+                        
+                        # # Fetch the comments using the cleaned ID
+                        # comentarios = fetch_comments(video_id, max_results=5)
+
+                        comentarios = get_comments(url_ingresada)
+
+                    # Mostrar resultado
+                    st.success("Comentarios obtenidos correctamente")
+                    # st.write(comentarios)
+
+                    # Código para probar el JSON
+                    # st.write(resultado)
+                    # Convertimos la cadena JSON a un diccionario de Python
+                    datos = json.loads(resultado)
+                    st.write(datos)
+                    st.write(datos["model_used"])
+                    # st.write(datos["comments"])
+                    st.write(datos["comments"][0]["text_original"])
+
+                    # Poner comentarios en formato dataframe
+                    df_comments = pd.DataFrame(datos["comments"])
+                    # Mostrar tabla
+                    st.dataframe(df_comments)
+
+                    # Recorrer los comentarios crear Json y actualizar Supabase con función
+                    st.write(save_comments(datos))
+                   
+                    # Ejemplo: Mostrar la URL en un botón de enlace
+                    st.link_button("Ir al video", st.session_state['ultima_url'])
+                else:
+                    st.warning("Por favor, introduce una URL válida primero.")
+
+        # Raya o separador al final de la pestaña
+        st.divider()
+        
+    with tab2:
+        st.header("Datos del segundo CSV")
+
+        boton_supabase = st.button("Supabase")
+        # if st.button("Supabase"):
+        if boton_supabase:
+
+            # --------------------------------------------------------
+            # Ejecutamos el codigo python para conectar con supabase
+            # --------------------------------------------------------
+            try:
+                # Spinner mientras consulta
+                with st.spinner("Consultando usuarios en Supabase..."):
+
+                    # df_users = pd.DataFrame(get_users())
+                    # df_users = pd.DataFrame(search_user("juanmanuel.iriondo@gmail.com"))
+                    df_users = pd.DataFrame(search_user("juana@gmail.com"))
+                    # df_users = pd.DataFrame(search_user(st.user.email))
+
+                    # Comprobamos que ha devuelto algo
+                    if df_users.empty:
+                        st.write("El usuario No existe")
+                    else:
+                        st.write("El usuario YA existe")
+                        st.write(df_users["id"][0])
+
+                        dato = df_users["id"][0] + 1
+                        st.write(dato)
+
+                st.success("Usuarios obtenidos correctamente")
+
+                # Mostrar tabla
+                st.dataframe(df_users)
+
+            except Exception as e:
+                st.error(f"Error conectando con Supabase: {e}")
+
+            # --------------------FIN conectar supabase-------------------------------------
+
+        # Raya o separador al final de la pestaña
+        st.divider()
+        
+    with tab3:
+        st.header("Datos del tercer CSV")
+        st.dataframe(df1) # Muestra la tabla interactiva
+
+        # Raya o separador al final de la pestaña
+        st.divider()
+    # -----------------------------------------------FIN DE PESTAÑAS----------------------------------------------
+
+    st.button("Log out", on_click=st.logout)
