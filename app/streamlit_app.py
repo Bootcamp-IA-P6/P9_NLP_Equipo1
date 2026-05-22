@@ -1,4 +1,5 @@
 import streamlit as st 
+import requests
 import pandas as pd
 import json
 import sys
@@ -104,7 +105,15 @@ resultado = """{
 # -------------------------
 
 def login_screen():
-    st.header(":orange[HateScan]")
+
+    with st.container():
+        col1, col2 = st.columns([4, 1])
+        
+        with col1:
+            st.header(":orange[HateScan]")
+            
+        with col2:
+            st.header("🤬🤓")
 
     # Línea divisoria naranja con CSS en st.markdown
     st.markdown("<hr style='border: 2px solid orange;'>", unsafe_allow_html=True)
@@ -186,9 +195,38 @@ if not st.user.is_logged_in:
 else:
     # Usando contenedores con borde
     with st.container(border=True, key="contenedor_personalizado"):
-        st.header(f"Welcome, {st.user.name}!")
-        st.write(f"**Correo electrónico:** \n{st.user.email}") 
-        st.write("🤓")
+        col11, col12 = st.columns([4, 1])
+
+        with col11:
+            st.header(f"Welcome, {st.user.name}!")
+            st.write(f"**Correo electrónico:** \n{st.user.email}")
+        with col12:
+            # Verificamos si el objeto de usuario contiene una URL de imagen de perfil.
+            if st.user.picture:
+                try:
+                    # Usamos la librería 'requests' para hacer una petición GET a la URL de la imagen.
+                    response = requests.get(st.user.picture)
+                    # Si el código de estado de la respuesta es 200 (OK), significa que la imagen se obtuvo correctamente.
+                    if response.status_code == 200:
+                        # Mostramos la imagen en la aplicación. response.content contiene los bytes de la imagen.
+                        st.image(response.content, width=100)
+                    else:
+                        # Si hay un problema al descargar la imagen (ej: error 404), mostramos una advertencia.
+                        st.warning("No se pudo cargar la imagen de perfil.")
+                except Exception as e:
+                    # Capturamos cualquier otra excepción (ej: problemas de red) y mostramos un mensaje de error.
+                    st.warning(f"Error al cargar la imagen: {e}")
+            else:
+                # Si el usuario de Google no tiene una imagen de perfil, informamos de ello.
+                st.info("No hay imagen de perfil disponible.")
+
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.header(":orange[HateScan]")
+            
+        with col2:
+            st.header("🤬🤓")
 
     # -----------------------------------------------PESTAÑAS----------------------------------------------------
     # Creamos las 3 pestañas
