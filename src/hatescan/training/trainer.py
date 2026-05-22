@@ -30,22 +30,31 @@ VALID_RUN_NAMES = {
     # hyperparameter_tuning.py
     "baseline_lr_tuned",
     "xgboost_tuned",
-    # ISSUE-07
+    # ISSUE-07 — binario
     "transformer_roberta",
+    # ISSUE-07 — multilabel
+    "transformer_multilabel",
+    "transformer_roberta_4labels",
+    "xmlroberta_4labels",
+    "xmlroberta_4labels_bilingual",
 }
  
 REQUIRED_METRICS = {"f1_macro", "precision", "recall", "roc_auc"}
  
 F1_THRESHOLDS = {
-    "baseline_lr":            0.60,
+    "baseline_lr":            0.65,
     "xgboost":                0.65,
-    "random_forest":          0.60,
-    "baseline_lr_enhanced":   0.60,
-    "xgboost_enhanced":       0.65,
-    "random_forest_enhanced": 0.60,
-    "baseline_lr_tuned":      0.65,
-    "xgboost_tuned":          0.60,
-    "transformer_roberta":    0.75,
+    "random_forest":          0.65,
+    "baseline_lr_enhanced":   0.65,
+    "xgboost_enhanced":       0.70,
+    "random_forest_enhanced": 0.65,
+    "baseline_lr_tuned":      0.68,
+    "xgboost_tuned":          0.66,
+    "transformer_roberta":            0.75,
+    "transformer_multilabel":         0.30,
+    "transformer_roberta_4labels":    0.30,
+    "xmlroberta_4labels":             0.30,
+    "xmlroberta_4labels_bilingual":   0.30,
 }
  
 MAX_OVERFITTING_GAP = 0.35
