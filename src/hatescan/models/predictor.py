@@ -184,37 +184,26 @@ class HateScanPredictor:
         self,
         comment_id: str,
         text_original: str,
-        probs: np.ndarray,          # (NUM_LABELS,) para este comentario
+        probs: np.ndarray,
     ) -> dict:
-        """
-        Construye el dict de un comentario individual en el formato JSON.
-
-        Mapeo de índices de LABEL_COLUMNS:
-            0 → IsAbusive    → is_toxic + confidence
-            1 → IsHatespeech → categories.is_hatespeech
-            2 → IsRacist     → categories.is_racist
-            3 → IsProvocative→ categories.is_obscene
-        """
         label_idx = {col: i for i, col in enumerate(LABEL_COLUMNS)}
 
-        # IsAbusive como proxy de toxicidad general
         abusive_prob  = float(probs[label_idx["IsAbusive"]])
         is_toxic      = abusive_prob >= self.threshold
         confidence    = round(abusive_prob, 4)
 
-        categories = {
-            "is_hatespeech": bool(probs[label_idx["IsHatespeech"]] >= self.threshold),
-            "is_racist":     bool(probs[label_idx["IsRacist"]]     >= self.threshold),
-            "is_threat":     None,   # no modelado — siempre null
-            "is_obscene":    bool(probs[label_idx["IsProvocative"]] >= self.threshold),
-        }
-
+        # RETORNAMOS EL FORMATO ACORDADO CON EL EQUIPO
         return {
-            "comment_id":   comment_id,
+            "comment_id":    comment_id,
             "text_original": text_original,
-            "is_toxic":     bool(is_toxic),
-            "confidence":   confidence,
-            "categories":   categories,
+            "is_toxic":      bool(is_toxic),
+            "confidence":    confidence,
+            "categories": {
+                "is_hatespeech": bool(probs[label_idx["IsHatespeech"]] >= self.threshold),
+                "is_racist":     bool(probs[label_idx["IsRacist"]] >= self.threshold),
+                "is_threat":     None,  # No lo tenemos modelado, va como null
+                "is_obscene":    bool(probs[label_idx["IsProvocative"]] >= self.threshold),
+            }
         }
 
     # ── API pública ───────────────────────────────────────────────────────────

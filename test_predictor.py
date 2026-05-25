@@ -19,6 +19,7 @@ Uso:
 import argparse
 import json
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -28,37 +29,40 @@ from hatescan.models.predictor import HateScanPredictor
 # ── Comentarios de prueba ─────────────────────────────────────────────────────
 # Mezcla de comentarios claramente tóxicos, borderline y neutros
 # para verificar que el modelo responde como esperamos.
+
+run_id = uuid.uuid4().hex[:6]
+
 TEST_COMMENTS = [
     {
-        "comment_id": "test_001",
+        "comment_id": f"test_{run_id}_001",
         "text": "you are so stupid and pathetic, go kill yourself",
     },
     {
-        "comment_id": "test_002",
+        "comment_id": f"test_{run_id}_002",
         "text": "great video, loved it! very informative thanks",
     },
     {
-        "comment_id": "test_003",
+        "comment_id": f"test_{run_id}_003",
         "text": "all people from that country are criminals and should be deported",
     },
     {
-        "comment_id": "test_004",
+        "comment_id": f"test_{run_id}_004",
         "text": "I disagree with your opinion but I respect your perspective",
     },
     {
-        "comment_id": "test_005",
+        "comment_id": f"test_{run_id}_005",
         "text": "this is pure propaganda, wake up sheeple!!!",
     },
     {
-        "comment_id": "test_006",
+        "comment_id": f"test_{run_id}_006",
         "text": "amazing content as always, keep it up!",
     },
     {
-        "comment_id": "test_007",
+        "comment_id": f"test_{run_id}_007",
         "text": "dirty immigrants stealing our jobs, go back to your country",
     },
     {
-        "comment_id": "test_008",
+        "comment_id": f"test_{run_id}_008",
         "text": "the algorithm on this platform is completely broken",
     },
 ]
@@ -80,7 +84,9 @@ def print_summary(result: dict) -> None:
     print("─" * 60)
     for c in result["comments"]:
         toxic_icon = "🔴" if c["is_toxic"] else "🟢"
-        cats = c["categories"]
+        
+        # Leemos de categories para armar los tags
+        cats = c.get("categories", {})
         flags = []
         if cats.get("is_hatespeech"): flags.append("hatespeech")
         if cats.get("is_racist"):     flags.append("racist")
