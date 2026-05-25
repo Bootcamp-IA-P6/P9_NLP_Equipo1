@@ -60,9 +60,10 @@ def split_dataset(
 def build_vectorizer(
     corpus: pd.Series,
     ngram_range: tuple[int, int] = (1, 2),
-    max_features: int = 10000,
+    max_features: int = 5000,
+    min_df: int = 3
 ) -> tuple[TfidfVectorizer, any]:
-    vectorizer = TfidfVectorizer(ngram_range=ngram_range, max_features=max_features)
+    vectorizer = TfidfVectorizer(ngram_range=ngram_range, max_features=max_features, min_df=min_df)
     matrix = vectorizer.fit_transform(corpus)
     return vectorizer, matrix
 
@@ -72,7 +73,7 @@ def transform_corpus(vectorizer: TfidfVectorizer, corpus: pd.Series) -> any:
 
 
 def train_logistic_regression(X, y) -> LogisticRegression:
-    model = LogisticRegression(max_iter=2000, class_weight="balanced", random_state=42)
+    model = LogisticRegression(C=0.1,max_iter=2000, class_weight="balanced", random_state=42)
     model.fit(X, y)
     return model
 
@@ -81,6 +82,9 @@ def train_xgboost(X, y, scale_pos_weight: float) -> XGBClassifier:
     model = XGBClassifier(
         eval_metric="logloss",
         scale_pos_weight=scale_pos_weight,
+        max_depth=3,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
         random_state=42,
         n_jobs=-1,
     )
