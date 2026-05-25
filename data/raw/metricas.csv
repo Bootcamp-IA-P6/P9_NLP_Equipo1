@@ -1,0 +1,11 @@
+Duration_sg,Run Name,f1_macro,f1_macro_test,f1_macro_train
+"53.5",transformer_multilabel,"0.47","0.403","0.526"
+"35.4",transformer_roberta,"0.769","0.785","0.839"
+"4.1",xgboost_tuned,"0.66","0.747","0.899"
+"4.1",baseline_lr_tuned,"0.716","0.757","0.896"
+"4.5",random_forest_enhanced,"0.653","0.721","1.0"
+"4.2",xgboost_enhanced,"0.719","0.748","0.981"
+"4.3",baseline_lr_enhanced,"0.684","0.743","0.981"
+"4.4",random_forest,"0.673","0.755","0.991"
+"4.0",xgboost_,"0.657","0.73","0.93"
+"6.4",baseline_lr_,"0.722","0.749","0.853"
