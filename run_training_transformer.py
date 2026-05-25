@@ -8,7 +8,7 @@ Uso rápido:
     uv run python run_training_transformer.py
 
 Con opciones:
-    uv run python run_training_transformer.py --epochs 3 --threshold 0.25
+    uv run python run_training_transformer.py --epochs 3 --threshold 0.45
     uv run python run_training_transformer.py --no-focal-loss
     uv run python run_training_transformer.py --model cardiffnlp/twitter-roberta-base-offensive
 
