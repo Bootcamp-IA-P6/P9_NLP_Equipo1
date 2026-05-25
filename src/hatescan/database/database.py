@@ -58,19 +58,23 @@ def save_hatescan_results(model_output_json: dict, current_session_user: str, vi
         # 2. Prepare bulk rows for the 'comments' table (The Details)
         comments_rows = []
         for item in model_output_json.get("comments", []):
+            
+            # Extraemos el diccionario de categorías (si no existe, usamos uno vacío)
             categories = item.get("categories", {})
             
             comment_row = {
                 "comment_id": item.get("comment_id"),
-                "search_id": generated_search_id,  # Link using the Foreign Key constraint
+                "search_id": generated_search_id,  
                 "text_original": item.get("text_original"),
-                "text_processed": None,  # Reserved for future text cleaning processes
+                "text_processed": None,  
                 "is_toxic": item.get("is_toxic"),
-                "confidence": float(item.get("confidence", 0.0)),  # Model prediction confidence score
-                "is_hatespeech": categories.get("is_hatespeech"),  # Stores None (maps to NULL in SQL)
-                "is_racist": categories.get("is_racist"),          # Stores None (maps to NULL in SQL)
-                "is_threat": categories.get("is_threat"),          # Stores None (maps to NULL in SQL)
-                "is_obscene": categories.get("is_obscene")         # Stores None (maps to NULL in SQL)
+                "confidence": float(item.get("confidence", 0.0)),  
+                
+                # Leemos desde el diccionario 'categories' hacia las columnas de Supabase
+                "is_hatespeech": categories.get("is_hatespeech"),  
+                "is_racist": categories.get("is_racist"),          
+                "is_threat": categories.get("is_threat"),          
+                "is_obscene": categories.get("is_obscene")         
             }
             comments_rows.append(comment_row)
             
