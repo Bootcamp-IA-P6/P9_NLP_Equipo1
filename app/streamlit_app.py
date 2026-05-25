@@ -12,6 +12,7 @@ from plotly.subplots import make_subplots
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 # Prepara el path para poder acceder a los scripts y funciones en carpeta src
 sys.path.append(".")
@@ -21,6 +22,10 @@ from src.hatescan.scraping.youtube_scraper import fetch_comments
 from src.hatescan.utils.youtube_utils import extract_video_id
 
 from src.hatescan.database.database import save_hatescan_results
+
+# Importaciones para probar el modelo
+from src.hatescan.models.predictor import HateScanPredictor
+
 
 
 from supabase import create_client, Client
@@ -170,23 +175,6 @@ def get_comments(url):
     return fetch_comments(video_id, max_results=5)
 
 
-# def save_comments(datos):
-#     # # 1. Datos externos simulados como cadena de texto
-#     # cadena_externa = '{"usuario": "Ana", "edad": 28, "activo": true}'
-
-#     # # 2. Convertir la cadena a un diccionario de Python
-#     # datos_json = json.loads(cadena_externa)
-
-#     # print(datos_json["usuario"]) # Imprime: Ana
-
-#     comment = {}
-#     comment["model_used"] = datos["model_used"]
-#     comment["text_original"] = datos["comments"][0]["text_original"] 
-#     comment["is_toxic"] = datos["comments"][0]["is_toxic"] 
-
-#     return comment
-
-
 def show_searches():
     # SELECT * FROM searches
     response = (
@@ -212,7 +200,7 @@ def show_comments():
     # Datos JSON devueltos
     return response.data
 
-def dashboard_models():
+def dashboard_models_prueba():
     st.header("DashBoard")
 
     df = pd.read_csv("data/raw/metricas.csv")
@@ -274,6 +262,68 @@ def dashboard_models():
         df_f1_macro_test_sort = df_filtered.sort_values(by="f1_macro_test")
         fig_f1_macro_test = px.bar(df_f1_macro_test_sort, x="f1_macro_test", y="Run Name", orientation='h', title="F1_macro_test")
         st.plotly_chart(fig_f1_macro_test)
+
+
+def dashboard_models():
+    st.header("DashBoard")
+
+    df_read = pd.read_csv("data/raw/mlflow_metricas.csv")
+    st.dataframe(df_read) # Muestra la tabla interactiva
+
+    columnas_dashboard = ['Name', 'f1_macro', 'f1_macro_test', 'f1_macro_train', 'recall', 'recall_test']
+    df = df_read[columnas_dashboard]
+
+    # Convertir columnas en numéricas
+    columnas = ['f1_macro', 'f1_macro_test', 'f1_macro_train', 'recall', 'recall_test']
+    df[columnas] = df[columnas].apply(pd.to_numeric)
+    
+    # ------------------------------------------------------------
+    # Botones y filtros
+    # ------------------------------------------------------------
+
+    # Separador visual opcional
+    st.markdown("---")
+
+    # Fila 1: Contenedor horizontal con multiselect
+    with st.container(horizontal=True, border=True):
+        st.write("Filtros")
+        seleccion = st.multiselect(
+            "Selecciona tu(s) modelo(s)",
+             options=df['Name'].unique(),
+             default=df['Name'].unique()
+             )
+
+    # Fila 2: Contenedor horizontal con botones
+    with st.container(horizontal=True, border=True):
+        btn_f1_macro = st.button("F1_macro")
+        btn_f1_macro_global = st.button("F1_macro_global")
+        btn_recall = st.button("Recall")
+        btn_recall_test = st.button("Recall_test")
+        btn_recall_global = st.button("Recall_global")
+
+    df_filtered = df[(df['Name'].isin(seleccion))]
+
+    if btn_f1_macro:
+        fig_f1_macro = px.bar(df_filtered, x="Name", y="f1_macro", title="F1_macro")
+        st.plotly_chart(fig_f1_macro)
+
+    if btn_f1_macro_global:
+        fig_f1_macro_global = px.bar(df_filtered, x="Name", y=["f1_macro", "f1_macro_test", "f1_macro_train"], title="F1_macro_global")
+        st.plotly_chart(fig_f1_macro_global, use_container_width=True)
+
+
+    if btn_recall:
+        fig_recall = px.bar(df_filtered, x="Name", y="recall", title="Recall")
+        st.plotly_chart(fig_recall)
+
+    if btn_recall_test:
+        df_recall_test_sort = df_filtered.sort_values(by="recall_test")
+        fig_recall_test = px.bar(df_recall_test_sort, x="recall_test", y="Name", orientation='h', title="Recall_test")
+        st.plotly_chart(fig_recall_test)
+
+    if btn_recall_global:
+        fig_recall_global = px.bar(df_filtered, x="Name", y=["recall", "recall_test"], title="Recall_global")
+        st.plotly_chart(fig_recall_global, use_container_width=True)
 
 
 def dashboard_comments():
@@ -389,7 +439,7 @@ else:
         with st.container(border=True, key="contenedor_url"):
 
             # 1. Pedir al usuario que ingrese la URL
-            url_ingresada = st.text_input("Introduce una URL de un video de Youtube (ej. https://google.com):")
+            url_ingresada = st.text_input("Introduce una URL de un video de Youtube (ej. https://www.youtube.com/watch?v=???????????):")
 
             # 2. Botón de acción
             if st.button("Procesar URL"):
@@ -421,9 +471,31 @@ else:
                         if not video_id:
                             print(f"Skipping: Could not extract a valid video ID from {url_ingresada}")
 
-                        # print(f"Extracted Video ID: {video_id}")
 
-                        save_hatescan_results(resultado, session_user, video_title, video_id)
+                        # fecha y hora actual
+                        now = datetime.now()
+                        fecha_hora_actual = now.strftime("%Y%m%d_%H%M%S")
+
+                        result_comments = [
+                            {
+                                "comment_id": f"{video_id}_{fecha_hora_actual}_c_{i}",
+                                "text": item["comment"]
+                            }
+                            for i, item in enumerate(comentarios)
+                        ]
+
+                        # save_hatescan_results(resultado, session_user, video_title, video_id)
+                        # st.success("Datos insertados correctamente")
+
+                        predictor = HateScanPredictor()   # carga el modelo una vez al arrancar
+                        result = predictor.predict(
+                            video_url=url_ingresada,
+                            video_id=video_id,
+                            video_title="Titulo desde Streamlit",
+                            comments=result_comments,
+                            user_session=st.user.email,
+                            save_to_db=True,
+                        )
                         st.success("Datos insertados correctamente")
 
                     except Exception as e:
@@ -501,10 +573,85 @@ else:
         st.divider()
     # -----------------------------------------------FIN DE PESTAÑAS----------------------------------------------
 
-    st.button("Log out", on_click=st.logout)
+    # st.button("Log out", on_click=st.logout)
 
-    # col21, col22 = st.columns([6, 1])
-    # with col21:
-    #     st.button("Log out", on_click=st.logout)
-    # with col22:
-    #      st.button("Créditos")
+
+    # ---------------------------------------------------------------------------------------------------------------
+    # Código de ventana modal con equipo
+    # ---------------------------------------------------------------------------------------------------------------
+
+    # 1. Definimos los datos de las 4 personas (puedes cambiar estos datos)
+    personas = [
+        {
+            "nombre": "Isabel Rodriguez",
+            "perfil": "Data Engineer",
+            "foto": "https://media.licdn.com/dms/image/v2/D4D03AQEB9zs-8sm0kg/profile-displayphoto-shrink_800_800/B4DZWo_1IeG4Ac-/0/1742297061202?e=1781136000&v=beta&t=DlZB2b7KDVf7pbcSN6lfwn1ekKJEimhs93PVgWJV1WA",
+            "linkedin": "https://www.linkedin.com/in/isabelrodriguezamor/"
+        },
+        {
+            "nombre": "Iris Amorim",
+            "perfil": "Data Scientist",
+            "foto": "https://media.licdn.com/dms/image/v2/D4E03AQEJTs7nw_T3wA/profile-displayphoto-crop_800_800/B4EZ05mWVHIkAI-/0/1774787850946?e=1781136000&v=beta&t=hfzEhIwLN1YXl5NFHu2vRTmKDUeKyl4zTT1wKhEuoew",
+            "linkedin": "https://www.linkedin.com/in/irisamorim/"
+        },
+        {
+            "nombre": "Joaquin Lazaro",
+            "perfil": "Data Scientist & Scrum Master",
+            "foto": "https://media.licdn.com/dms/image/v2/D4E35AQFCyI20hWpOAA/profile-framedphoto-shrink_800_800/B4EZrj1PhzKMAg-/0/1764758976941?e=1780315200&v=beta&t=qlp2rAy0ITtc79TxXN5BqpMxHQA4iVvHNrL3na7rOpE",
+            "linkedin": "https://www.linkedin.com/in/joaquin-lazarom/"
+        },
+        {
+            "nombre": "Juan Manuel Iriondo",
+            "perfil": "Data Analyst & Product Owner",
+            "foto": "https://media.licdn.com/dms/image/v2/D4D35AQEXVlh9IvKGeg/profile-framedphoto-shrink_100_100/profile-framedphoto-shrink_100_100/0/1722427578700?e=1780311600&v=beta&t=7mi_4dkStCb5XVibTtIwN3bsdIKW76ybjBKwraKJv_A",
+            "linkedin": "https://www.linkedin.com/in/juanmanueliriondoortega/"
+        }
+    ]
+
+    # 2. Creamos la pantalla modal
+    @st.dialog("Equipo de Trabajo", width="large")
+    def mostrar_modal_tarjetas():
+        st.write("Conoce a los miembros del equipo:")
+        
+        # Creamos 4 columnas dentro del modal para las 4 tarjetas
+        columnas = st.columns(4)
+        
+        for i, persona in enumerate(personas):
+            with columnas[i]:
+                # Diseñamos la tarjeta usando HTML y CSS básico
+                st.markdown(
+                    f"""
+                    <div style="
+                        border: 1px solid #e0e0e0; 
+                        border-radius: 10px; 
+                        padding: 15px; 
+                        text-align: center; 
+                        box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+                        margin-bottom: 20px;
+                        background-color: #f9f9f9;
+                    ">
+                        <img src="{persona['foto']}" alt="{persona['nombre']}" style="width: 80px; border-radius: 50%; margin-bottom: 10px;">
+                        <h4 style="margin: 0; color: #333;">{persona['nombre']}</h4>
+                        <h3 style="margin: 0; color: #333;">{persona['perfil']}</h3>
+                        <br>
+                        <a href="{persona['linkedin']}" target="_blank" style="
+                            text-decoration: none; 
+                            background-color: #0077B5; 
+                            color: white; 
+                            padding: 8px 15px; 
+                            border-radius: 5px; 
+                            font-weight: bold;
+                            display: inline-block;
+                        ">LinkedIn</a>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+
+
+    col21, col22 = st.columns([5, 1])
+    with col21:
+        st.button("Log out", on_click=st.logout)
+    with col22:
+        if st.button("👥 Equipo"):
+            mostrar_modal_tarjetas()
