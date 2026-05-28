@@ -267,7 +267,8 @@ def dashboard_models_prueba():
 def dashboard_models():
     st.header("DashBoard")
 
-    df_read = pd.read_csv("data/raw/mlflow_metricas.csv")
+    # df_read = pd.read_csv("data/raw/mlflow_metricas.csv")
+    df_read = pd.read_csv("data/raw/mlflow_metricas (2).csv")
     st.dataframe(df_read) # Muestra la tabla interactiva
 
     columnas_dashboard = ['Name', 'f1_macro', 'f1_macro_test', 'f1_macro_train', 'recall', 'recall_test']
